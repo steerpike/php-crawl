@@ -1,0 +1,76 @@
+LOAD CSV WITH HEADERS FROM 'file:///artists.csv' AS row 
+  WITH toInteger(row.id) as id, row.name as name, 
+  row.url as url, row.path as path, toInteger(row.error) as error, 
+  toInteger(row.crawled) as crawled 
+  RETURN id, name, url, path, crawled, error
+  LIMIT 5;
+
+
+LOAD CSV WITH HEADERS FROM 'file:///artists.csv' AS row 
+  WITH toInteger(row.id) as id, row.name as name, 
+  row.url as url, row.path as path
+  MERGE (a:Artist {id:id}) 
+    SET a.name = name, a.url = url, a.path = path
+  RETURN count(a);
+
+
+LOAD CSV WITH HEADERS FROM 'file:///tags.csv' AS row 
+  WITH toInteger(row.id) as id, row.name as name
+  MERGE (t:Tag {id:id}) 
+    SET t.name = name
+  RETURN count(t);
+
+  LOAD CSV WITH HEADERS FROM 'file:///artists_tags.csv' AS row 
+  WITH toInteger(row.artist_id) as artist_id, toInteger(row.tag_id) as tag_id
+  MATCH (a:Artist {id:artist_id})
+  MATCH (t:Tag {id:tag_id})
+  MERGE (a)-[r:TAGGED]->(t)
+  RETURN count(t);
+
+LOAD CSV WITH HEADERS FROM 'file:///related_artists.csv' AS row 
+  WITH toInteger(row.artist_id) as artist_id, toInteger(row.related_id) as related_id
+  MATCH (a:Artist {id:artist_id})
+  MATCH (art:Artist {id:related_id})
+  MERGE (a)-[r:RELATED]->(art)
+  RETURN count(art);
+
+
+
+  // Show list of artists and their tags:
+
+  MATCH (a:Artist)-[rel:TAGGED]->(t:Tag)
+  RETURN a.n
+
+//  Show artists tagged with specific tags
+
+WITH ['indie','folk'] AS tagRequirements
+UNWIND tagRequirements AS tag
+MATCH (a:Artist)-[r:TAGGED]-(t:Tag {name: tag})
+RETURN t.name, collect(a.name) AS potentialArtists;
+
+// Get artists that share the same tags as 'X' artist
+MATCH (a:Artist {name:'Gordi'})-[:TAGGED]->(t:Tag)<-[:TAGGED]-(art:Artist)
+WITH art, COUNT(*) as commonTags
+RETURN art.name, art.id ORDER BY commonTags DESC LIMIT 10
+
+
+// ABOVE AS SQL 
+SELECT at1.artist_id, Count(at1.tag_id) AS common_tag_count
+FROM artists_tags AS at1 INNER JOIN artists_tags AS at2 ON at1.tag_id = at2.tag_id
+WHERE at2.artist_id = 12
+GROUP BY at1.artist_id
+HAVING at1.artist_id != 12
+ORDER BY Count(at1.tag_id) DESC, at1.artist_id LIMIT 10;
+
+// SAME RESULTS AS CYPHER:
+MATCH (a:Artist {name:'Gordi'})-[:TAGGED]->(t:Tag)<-[:TAGGED]-(art:Artist)
+WITH art, COUNT(*) as commonTags 
+RETURN art.name, art.id, commonTags ORDER BY commonTags DESC, art.id LIMIT 10
+
+
+
+MATCH (artist1:Artist {name: "London Grammar"}),
+      (artist2:Artist {name: "The Format"}),
+      p = shortestPath((artist1)-[:RELATED*]-(artist2))
+WHERE length(p) > 1
+RETURN p

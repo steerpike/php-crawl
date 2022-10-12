@@ -47,9 +47,9 @@ $db->query('CREATE TABLE IF NOT EXISTS "related_artists" (
 
 
 //$url = "https://www.last.fm/music/Florence+%252B+the+Machine";
-//$url = "https://www.last.fm/music/Gordi";
+$url = "https://www.last.fm/music/Gordi";
 //$url = "https://www.last.fm/music/Built+for+the+Sea";
-$url = 0;
+//$url = 0;
 //$url = "https://www.last.fm/music/Taylor+Swift";
 //$url = "https://www.last.fm/music/Stars";
 
